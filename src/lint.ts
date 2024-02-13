@@ -1,9 +1,36 @@
-import {EditorView, ViewPlugin, Decoration, DecorationSet,
-        WidgetType, ViewUpdate, Command, logException, KeyBinding,
-        hoverTooltip, Tooltip, showTooltip, gutter, GutterMarker,
-        PanelConstructor, Panel, showPanel, getPanel} from "@codemirror/view"
-import {Text, StateEffect, StateField, Extension, TransactionSpec, Transaction,
-        EditorState, Facet, combineConfig, RangeSet, Range} from "@codemirror/state"
+import {
+  Command,
+  Decoration,
+  DecorationSet,
+  EditorView,
+  getPanel,
+  gutter,
+  GutterMarker,
+  hoverTooltip,
+  KeyBinding,
+  logException,
+  Panel,
+  PanelConstructor,
+  showPanel,
+  showTooltip,
+  Tooltip,
+  ViewPlugin,
+  ViewUpdate,
+  WidgetType
+} from "@codemirror/view"
+import {
+  combineConfig,
+  EditorState,
+  Extension,
+  Facet,
+  Range,
+  RangeSet,
+  StateEffect,
+  StateField,
+  Text,
+  Transaction,
+  TransactionSpec
+} from "@codemirror/state"
 import elt from "crelt"
 
 type Severity = "hint" | "info" | "warning" | "error"
@@ -75,13 +102,15 @@ interface LintGutterConfig {
 }
 
 class SelectedDiagnostic {
-  constructor(readonly from: number, readonly to: number, readonly diagnostic: Diagnostic) {}
+  constructor(readonly from: number, readonly to: number, readonly diagnostic: Diagnostic) {
+  }
 }
 
 class LintState {
   constructor(readonly diagnostics: DecorationSet,
               readonly panel: PanelConstructor | null,
-              readonly selected: SelectedDiagnostic | null) {}
+              readonly selected: SelectedDiagnostic | null) {
+  }
 
   static init(diagnostics: readonly Diagnostic[], panel: PanelConstructor | null, state: EditorState) {
     // Filter the list of diagnostics for which to create markers
@@ -170,7 +199,7 @@ const lintState = StateField.define<LintState>({
     return value
   },
   provide: f => [showPanel.from(f, val => val.panel),
-                 EditorView.decorations.from(f, s => s.diagnostics)]
+    EditorView.decorations.from(f, s => s.diagnostics)]
 })
 
 /// Returns the number of active lint diagnostics in the given state.
@@ -186,7 +215,7 @@ function lintTooltip(view: EditorView, pos: number, side: -1 | 1) {
   let found: Diagnostic[] = [], stackStart = 2e8, stackEnd = 0
   diagnostics.between(pos - (side < 0 ? 1 : 0), pos + (side > 0 ? 1 : 0), (from, to, {spec}) => {
     if (pos >= from && pos <= to &&
-        (from == to || ((pos > from || side > 0) && (pos < to || side < 0)))) {
+      (from == to || ((pos > from || side > 0) && (pos < to || side < 0)))) {
       found.push(spec.diagnostic)
       stackStart = Math.min(from, stackStart)
       stackEnd = Math.max(to, stackEnd)
@@ -250,8 +279,14 @@ export const previousDiagnostic: Command = (view: EditorView) => {
   let sel = state.selection.main
   let prevFrom: number | undefined, prevTo: number | undefined, lastFrom: number | undefined, lastTo: number | undefined
   field.diagnostics.between(0, state.doc.length, (from, to) => {
-    if (to < sel.to && (prevFrom == null || prevFrom < from)) { prevFrom = from; prevTo = to }
-    if (lastFrom == null || from > lastFrom) { lastFrom = from; lastTo = to }
+    if (to < sel.to && (prevFrom == null || prevFrom < from)) {
+      prevFrom = from;
+      prevTo = to
+    }
+    if (lastFrom == null || from > lastFrom) {
+      lastFrom = from;
+      lastTo = to
+    }
   })
   if (lastFrom == null || prevFrom == null && lastFrom == sel.from) return false
   view.dispatch({selection: {anchor: prevFrom ?? lastFrom, head: prevTo ?? lastTo}, scrollIntoView: true})
@@ -295,7 +330,9 @@ const lintPlugin = ViewPlugin.fromClass(class {
           if (this.view.state.doc == state.doc)
             this.view.dispatch(setDiagnostics(this.view.state, all))
         },
-        error => { logException(this.view.state, error) }
+        error => {
+          logException(this.view.state, error)
+        }
       )
     }
   }
@@ -303,7 +340,7 @@ const lintPlugin = ViewPlugin.fromClass(class {
   update(update: ViewUpdate) {
     let config = update.state.facet(lintConfig)
     if (update.docChanged || config != update.startState.facet(lintConfig) ||
-        config.needsRefresh && config.needsRefresh(update)) {
+      config.needsRefresh && config.needsRefresh(update)) {
       this.lintTime = Date.now() + config.delay
       if (!this.set) {
         this.set = true
@@ -324,8 +361,8 @@ const lintPlugin = ViewPlugin.fromClass(class {
   }
 })
 
-const lintConfig = Facet.define<{source: LintSource | null, config: LintConfig},
-                                Required<LintConfig> & {sources: readonly LintSource[]}>({
+const lintConfig = Facet.define<{ source: LintSource | null, config: LintConfig },
+  Required<LintConfig> & { sources: readonly LintSource[] }>({
   combine(input) {
     return {
       sources: input.map(i => i.source).filter(x => x != null) as readonly LintSource[],
@@ -365,15 +402,17 @@ export function forceLinting(view: EditorView) {
 
 function assignKeys(actions: readonly Action[] | undefined) {
   let assigned: string[] = []
-  if (actions) actions: for (let {name} of actions) {
-    for (let i = 0; i < name.length; i++) {
-      let ch = name[i]
-      if (/[a-zA-Z]/.test(ch) && !assigned.some(c => c.toLowerCase() == ch.toLowerCase())) {
-        assigned.push(ch)
-        continue actions
+  if (actions) {
+    actions: for (let {name} of actions) {
+      for (let i = 0; i < name.length; i++) {
+        let ch = name[i]
+        if (/[a-zA-Z]/.test(ch) && !assigned.some(c => c.toLowerCase() == ch.toLowerCase())) {
+          assigned.push(ch)
+          continue actions
+        }
       }
+      assigned.push("")
     }
-    assigned.push("")
   }
   return assigned
 }
@@ -393,8 +432,8 @@ function renderDiagnostic(view: EditorView, diagnostic: Diagnostic, inPanel: boo
       }
       let {name} = action, keyIndex = keys[i] ? name.indexOf(keys[i]) : -1
       let nameElt = keyIndex < 0 ? name : [name.slice(0, keyIndex),
-                                           elt("u", name.slice(keyIndex, keyIndex + 1)),
-                                           name.slice(keyIndex + 1)]
+        elt("u", name.slice(keyIndex, keyIndex + 1)),
+        name.slice(keyIndex + 1)]
       return elt("button", {
         type: "button",
         class: "cm-diagnosticAction",
@@ -407,9 +446,13 @@ function renderDiagnostic(view: EditorView, diagnostic: Diagnostic, inPanel: boo
 }
 
 class DiagnosticWidget extends WidgetType {
-  constructor(readonly diagnostic: Diagnostic) {super()}
+  constructor(readonly diagnostic: Diagnostic) {
+    super()
+  }
 
-  eq(other: DiagnosticWidget) { return other.diagnostic == this.diagnostic }
+  eq(other: DiagnosticWidget) {
+    return other.diagnostic == this.diagnostic
+  }
 
   toDOM() {
     return elt("span", {class: "cm-lintPoint cm-lintPoint-" + this.diagnostic.severity})
@@ -494,14 +537,20 @@ class LintPanel implements Panel {
     diagnostics.between(0, this.view.state.doc.length, (_start, _end, {spec}) => {
       let found = -1, item
       for (let j = i; j < this.items.length; j++)
-        if (this.items[j].diagnostic == spec.diagnostic) { found = j; break }
+        if (this.items[j].diagnostic == spec.diagnostic) {
+          found = j;
+          break
+        }
       if (found < 0) {
         item = new PanelItem(this.view, spec.diagnostic)
         this.items.splice(i, 0, item)
         needsSync = true
       } else {
         item = this.items[found]
-        if (found > i) { this.items.splice(i, found - i); needsSync = true }
+        if (found > i) {
+          this.items.splice(i, found - i);
+          needsSync = true
+        }
       }
       if (selected && item.diagnostic == selected.diagnostic) {
         if (!item.dom.hasAttribute("aria-selected")) {
@@ -544,6 +593,7 @@ class LintPanel implements Panel {
 
   sync() {
     let domPos: ChildNode | null = this.list.firstChild
+
     function rm() {
       let prev = domPos!
       domPos = prev.nextSibling
@@ -573,7 +623,9 @@ class LintPanel implements Panel {
     })
   }
 
-  static open(view: EditorView) { return new LintPanel(view) }
+  static open(view: EditorView) {
+    return new LintPanel(view)
+  }
 }
 
 function svg(content: string, attrs = `viewBox="0 0 40 40"`) {
@@ -582,7 +634,7 @@ function svg(content: string, attrs = `viewBox="0 0 40 40"`) {
 
 function underline(color: string) {
   return svg(`<path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${color}" fill="none" stroke-width=".7"/>`,
-             `width="6" height="3"`)
+    `width="6" height="3"`)
 }
 
 const baseTheme = EditorView.baseTheme({
@@ -592,10 +644,10 @@ const baseTheme = EditorView.baseTheme({
     display: "block",
     whiteSpace: "pre-wrap"
   },
-  ".cm-diagnostic-error": { borderLeft: "5px solid #d11" },
-  ".cm-diagnostic-warning": { borderLeft: "5px solid orange" },
-  ".cm-diagnostic-info": { borderLeft: "5px solid #999" },
-  ".cm-diagnostic-hint": { borderLeft: "5px solid #66d" },
+  ".cm-diagnostic-error": {borderLeft: "5px solid #d11"},
+  ".cm-diagnostic-warning": {borderLeft: "5px solid orange"},
+  ".cm-diagnostic-info": {borderLeft: "5px solid #999"},
+  ".cm-diagnostic-hint": {borderLeft: "5px solid #66d"},
 
   ".cm-diagnosticAction": {
     font: "inherit",
@@ -619,11 +671,11 @@ const baseTheme = EditorView.baseTheme({
     paddingBottom: "0.7px",
   },
 
-  ".cm-lintRange-error": { backgroundImage: underline("#d11") },
-  ".cm-lintRange-warning": { backgroundImage: underline("orange") },
-  ".cm-lintRange-info": { backgroundImage: underline("#999") },
-  ".cm-lintRange-hint": { backgroundImage: underline("#66d") },
-  ".cm-lintRange-active": { backgroundColor: "#ffdd9980" },
+  ".cm-lintRange-error": {backgroundImage: underline("#d11")},
+  ".cm-lintRange-warning": {backgroundImage: underline("orange")},
+  ".cm-lintRange-info": {backgroundImage: underline("#999")},
+  ".cm-lintRange-hint": {backgroundImage: underline("#66d")},
+  ".cm-lintRange-active": {backgroundColor: "#ffdd9980"},
 
   ".cm-tooltip-lint": {
     padding: 0,
@@ -645,13 +697,13 @@ const baseTheme = EditorView.baseTheme({
   },
 
   ".cm-lintPoint-warning": {
-    "&:after": { borderBottomColor: "orange" }
+    "&:after": {borderBottomColor: "orange"}
   },
   ".cm-lintPoint-info": {
-    "&:after": { borderBottomColor: "#999" }
+    "&:after": {borderBottomColor: "#999"}
   },
   ".cm-lintPoint-hint": {
-    "&:after": { borderBottomColor: "#66d" }
+    "&:after": {borderBottomColor: "#66d"}
   },
 
   ".cm-panel.cm-panel-lint": {
@@ -661,7 +713,7 @@ const baseTheme = EditorView.baseTheme({
       overflowY: "auto",
       "& [aria-selected]": {
         backgroundColor: "#ddd",
-        "& u": { textDecoration: "underline" }
+        "& u": {textDecoration: "underline"}
       },
       "&:focus [aria-selected]": {
         background_fallback: "#bdf",
@@ -669,7 +721,7 @@ const baseTheme = EditorView.baseTheme({
         color_fallback: "white",
         color: "HighlightText"
       },
-      "& u": { textDecoration: "none" },
+      "& u": {textDecoration: "none"},
       padding: 0,
       margin: 0
     },
@@ -692,10 +744,11 @@ function severityWeight(sev: Severity) {
 
 class LintGutterMarker extends GutterMarker {
   severity: Severity
+
   constructor(readonly diagnostics: readonly Diagnostic[]) {
     super()
     this.severity = diagnostics.reduce((max, d) => severityWeight(max) < severityWeight(d.severity) ? d.severity : max,
-                                       "hint" as Severity)
+      "hint" as Severity)
   }
 
   toDOM(view: EditorView) {
@@ -722,7 +775,7 @@ function trackHoverOn(view: EditorView, marker: HTMLElement) {
   let mousemove = (event: MouseEvent) => {
     let rect = marker.getBoundingClientRect()
     if (event.clientX > rect.left - Hover.Margin && event.clientX < rect.right + Hover.Margin &&
-        event.clientY > rect.top - Hover.Margin && event.clientY < rect.bottom + Hover.Margin)
+      event.clientY > rect.top - Hover.Margin && event.clientY < rect.bottom + Hover.Margin)
       return
     for (let target = event.target as Node | null; target; target = target.parentNode) {
       if (target.nodeType == 1 && (target as HTMLElement).classList.contains("cm-tooltip-lint"))
@@ -740,16 +793,18 @@ function gutterMarkerMouseOver(view: EditorView, marker: HTMLElement, diagnostic
     let line = view.elementAtHeight(marker.getBoundingClientRect().top + 5 - view.documentTop)
     const linePos = view.coordsAtPos(line.from)
     if (linePos) {
-      view.dispatch({effects: setLintGutterTooltip.of({
-        pos: line.from,
-        above: false,
-        create() {
-          return {
-            dom: diagnosticsTooltip(view, diagnostics),
-            getCoords: () => marker.getBoundingClientRect()
+      view.dispatch({
+        effects: setLintGutterTooltip.of({
+          pos: line.from,
+          above: false,
+          create() {
+            return {
+              dom: diagnosticsTooltip(view, diagnostics),
+              getCoords: () => marker.getBoundingClientRect()
+            }
           }
-        }
-      })})
+        })
+      })
     }
     marker.onmouseout = marker.onmousemove = null
     trackHoverOn(view, marker)
@@ -769,7 +824,7 @@ function gutterMarkerMouseOver(view: EditorView, marker: HTMLElement, diagnostic
 }
 
 function markersForDiagnostics(doc: Text, diagnostics: readonly Diagnostic[]) {
-  let byLine: {[line: number]: Diagnostic[]} = Object.create(null)
+  let byLine: { [line: number]: Diagnostic[] } = Object.create(null)
   for (let diagnostic of diagnostics) {
     let line = doc.lineAt(diagnostic.from)
     ;(byLine[line.from] || (byLine[line.from] = [])).push(diagnostic)
@@ -808,7 +863,9 @@ const lintGutterMarkers = StateField.define<RangeSet<GutterMarker>>({
 const setLintGutterTooltip = StateEffect.define<Tooltip | null>()
 
 const lintGutterTooltip = StateField.define<Tooltip | null>({
-  create() { return null },
+  create() {
+    return null
+  },
   update(tooltip, tr) {
     if (tooltip && tr.docChanged)
       tooltip = hideTooltip(tr, tooltip) ? null : {...tooltip, pos: tr.changes.mapPos(tooltip.pos)}
